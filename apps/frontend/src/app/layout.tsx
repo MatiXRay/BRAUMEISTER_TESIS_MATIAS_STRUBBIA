@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,15 +14,15 @@ export const metadata: Metadata = {
   description: "Sistema de gestión de producción cervecera",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <ClerkProvider>
-      <html lang="es" className={`${geistSans.variable} h-full antialiased`}>
-        <body className="min-h-full flex flex-col">{children}</body>
+      <html lang="es" className={geistSans.variable}>
+        <body className="min-h-screen bg-background text-foreground antialiased">
+          <TooltipProvider>
+            {children}
+          </TooltipProvider>
+        </body>
       </html>
     </ClerkProvider>
   );
