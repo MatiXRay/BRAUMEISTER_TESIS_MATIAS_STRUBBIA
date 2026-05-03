@@ -1,6 +1,7 @@
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Separator } from "@/components/ui/separator";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -10,6 +11,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <header className="flex h-12 items-center gap-2 px-4 border-b border-border shrink-0">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="h-4" />
+          <div className="ml-auto">
+            <ThemeToggle />
+          </div>
         </header>
         <main className="flex-1 p-6">
           {children}

@@ -40,11 +40,7 @@ import {
 import { UserButton, useUser } from "@clerk/nextjs";
 
 const navMain = [
-  {
-    title: "Inicio",
-    url: "/dashboard",
-    icon: LayoutDashboard,
-  },
+  { title: "Inicio", url: "/dashboard", icon: LayoutDashboard },
 ];
 
 const navProduccion = [
@@ -72,6 +68,26 @@ const navAnalisis = [
   { title: "Estadísticas", url: "/dashboard/estadisticas", icon: BarChart3 },
 ];
 
+type NavItem = { title: string; url: string; icon: React.ElementType };
+
+function NavItems({ items, isActive }: { items: NavItem[]; isActive: (url: string) => boolean }) {
+  return (
+    <>
+      {items.map((item) => (
+        <SidebarMenuItem key={item.url}>
+          <SidebarMenuButton
+            isActive={isActive(item.url)}
+            render={<Link href={item.url} />}
+          >
+            <item.icon />
+            <span>{item.title}</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      ))}
+    </>
+  );
+}
+
 export function AppSidebar() {
   const pathname = usePathname();
   const { user } = useUser();
@@ -97,16 +113,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navMain.map((item) => (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                    <Link href={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              <NavItems items={navMain} isActive={isActive} />
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -115,16 +122,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Producción</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navProduccion.map((item) => (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                    <Link href={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              <NavItems items={navProduccion} isActive={isActive} />
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -133,16 +131,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Recetas</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navRecetas.map((item) => (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                    <Link href={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              <NavItems items={navRecetas} isActive={isActive} />
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -153,24 +142,27 @@ export function AppSidebar() {
             <SidebarMenu>
               <Collapsible defaultOpen className="group/collapsible">
                 <SidebarMenuItem>
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton
-                      isActive={navIngredientes.some((i) => isActive(i.url))}
-                    >
-                      <Wheat />
-                      <span>Ingredientes</span>
-                      <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
-                    </SidebarMenuButton>
+                  <CollapsibleTrigger
+                    render={
+                      <SidebarMenuButton
+                        isActive={navIngredientes.some((i) => isActive(i.url))}
+                      />
+                    }
+                  >
+                    <Wheat />
+                    <span>Ingredientes</span>
+                    <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <SidebarMenuSub>
                       {navIngredientes.map((item) => (
                         <SidebarMenuSubItem key={item.url}>
-                          <SidebarMenuSubButton asChild isActive={isActive(item.url)}>
-                            <Link href={item.url}>
-                              <item.icon />
-                              <span>{item.title}</span>
-                            </Link>
+                          <SidebarMenuSubButton
+                            isActive={isActive(item.url)}
+                            render={<Link href={item.url} />}
+                          >
+                            <item.icon />
+                            <span>{item.title}</span>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
                       ))}
@@ -186,16 +178,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Operaciones</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navOperaciones.map((item) => (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                    <Link href={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              <NavItems items={navOperaciones} isActive={isActive} />
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -204,16 +187,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Análisis</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navAnalisis.map((item) => (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                    <Link href={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              <NavItems items={navAnalisis} isActive={isActive} />
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -222,11 +196,12 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/dashboard/configuracion")}>
-                  <Link href="/dashboard/configuracion">
-                    <Settings />
-                    <span>Configuración</span>
-                  </Link>
+                <SidebarMenuButton
+                  isActive={isActive("/dashboard/configuracion")}
+                  render={<Link href="/dashboard/configuracion" />}
+                >
+                  <Settings />
+                  <span>Configuración</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
