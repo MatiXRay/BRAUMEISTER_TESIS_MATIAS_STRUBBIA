@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <ClerkProvider>
-      <html lang="es" className={geistSans.variable}>
+      <html lang="es" className={geistSans.variable} suppressHydrationWarning>
         <body className="min-h-screen bg-background text-foreground antialiased">
           <ThemeProvider>
             <TooltipProvider>
