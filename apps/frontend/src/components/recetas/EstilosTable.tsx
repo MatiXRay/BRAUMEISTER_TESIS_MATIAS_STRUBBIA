@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
-import { Pencil, Trash2, Plus, Eye } from "lucide-react";
+import { Pencil, Trash2, Plus } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -81,8 +81,8 @@ export function EstilosTable({ initialData }: { initialData: Estilo[] }) {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
-                    <Button variant="ghost" size="icon" asChild>
-                      <Link href={`/dashboard/recetas/${e._id}/editar`}><Pencil className="h-4 w-4" /></Link>
+                    <Button variant="ghost" size="icon" render={<Link href={`/dashboard/recetas/${e._id}/editar`} />}>
+                      <Pencil className="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"
                       onClick={() => handleEliminar(e._id)} disabled={eliminando === e._id}>
