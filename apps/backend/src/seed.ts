@@ -5,13 +5,14 @@
 
 import 'dotenv/config';
 import mongoose from 'mongoose';
-import { Malta }        from './models/Malta';
-import { Lupulo }       from './models/Lupulo';
-import { Levadura }     from './models/Levadura';
-import { Fermentador }  from './models/Fermentador';
-import { Estilo }       from './models/Estilo';
-import { ReporteAgua }  from './models/ReporteAgua';
-import { Lote }         from './models/Lote';
+import { Malta }          from './models/Malta';
+import { Lupulo }         from './models/Lupulo';
+import { Levadura }       from './models/Levadura';
+import { Fermentador }    from './models/Fermentador';
+import { Estilo }         from './models/Estilo';
+import { ReporteAgua }    from './models/ReporteAgua';
+import { Lote }           from './models/Lote';
+import { Planificacion }  from './models/Planificacion';
 
 async function main() {
   await mongoose.connect(process.env.MONGODB_URI!);
@@ -26,6 +27,7 @@ async function main() {
     Estilo.deleteMany({}),
     ReporteAgua.deleteMany({}),
     Lote.deleteMany({}),
+    Planificacion.deleteMany({}),
   ]);
   console.log('Colecciones limpiadas');
 
@@ -262,6 +264,48 @@ async function main() {
     },
   ]);
   console.log(`${lotes.length} lotes insertados`);
+
+  // ── PLANIFICACIÓN ────────────────────────────────────────────
+  const planes = await Planificacion.insertMany([
+    {
+      nombre: 'IPA Mayo',
+      estilo_id: estilos[0]._id, estilo_nombre: 'American IPA',
+      fermentador_id: fermentadores[0]._id, fermentador_nombre: 'FV-01',
+      fecha_coccion: new Date('2026-05-05'), fecha_fin: new Date('2026-05-26'),
+      duracion_dias: 21, notas: 'IPA para la feria de mayo.',
+      color: '#e07b39', estado: 'planificado',
+      tareas: [
+        { nombre: 'Pedir insumos',      fecha_estimada: new Date('2026-04-28'), orden: 0 },
+        { nombre: 'Preparar agua mash', fecha_estimada: new Date('2026-05-04'), orden: 1 },
+        { nombre: 'Día de cocción',     fecha_estimada: new Date('2026-05-05'), orden: 2 },
+        { nombre: 'Dry hop',            fecha_estimada: new Date('2026-05-20'), orden: 3 },
+        { nombre: 'Envasado',           fecha_estimada: new Date('2026-05-26'), orden: 4 },
+      ],
+    },
+    {
+      nombre: 'Stout Invierno',
+      estilo_id: estilos[1]._id, estilo_nombre: 'American Stout',
+      fermentador_id: fermentadores[1]._id, fermentador_nombre: 'FV-02',
+      fecha_coccion: new Date('2026-06-02'), fecha_fin: new Date('2026-06-30'),
+      duracion_dias: 28, notas: 'Stout imperial de temporada fría.',
+      color: '#5c3317', estado: 'planificado',
+      tareas: [
+        { nombre: 'Pedir insumos',  fecha_estimada: new Date('2026-05-26'), orden: 0 },
+        { nombre: 'Día de cocción', fecha_estimada: new Date('2026-06-02'), orden: 1 },
+        { nombre: 'Envasado',       fecha_estimada: new Date('2026-06-30'), orden: 2 },
+      ],
+    },
+    {
+      nombre: 'Pale Ale Junio',
+      estilo_id: estilos[2]._id, estilo_nombre: 'Pale Ale',
+      fermentador_id: fermentadores[2]._id, fermentador_nombre: 'FV-03',
+      fecha_coccion: new Date('2026-06-15'), fecha_fin: new Date('2026-07-03'),
+      duracion_dias: 18, notas: 'Pale Ale para consumo local.',
+      color: '#f0a500', estado: 'planificado',
+      tareas: [],
+    },
+  ]);
+  console.log(`${planes.length} planes de planificación insertados`);
 
   console.log('\n✅ Seed completado');
   await mongoose.disconnect();

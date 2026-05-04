@@ -8,6 +8,7 @@ import reportesAguaRouter  from './reportesAgua';
 import lotesRouter         from './lotes';
 import estadisticasRouter  from './estadisticas';
 import notasCataRouter     from './notasCata';
+import planificacionRouter from './planificacion';
 
 const router = Router();
 
@@ -24,5 +25,6 @@ router.use('/reportes-agua', reportesAguaRouter);
 router.use('/lotes',         lotesRouter);
 router.use('/estadisticas',  estadisticasRouter);
 router.use('/notas-cata',    notasCataRouter);
+router.use('/planificacion', planificacionRouter);
 
 export default router;
