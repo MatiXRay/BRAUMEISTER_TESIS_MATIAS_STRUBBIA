@@ -4,6 +4,8 @@ import lupulosRouter       from './lupulos';
 import levaduraRouter      from './levaduras';
 import fermentadoresRouter from './fermentadores';
 import estilosRouter       from './estilos';
+import reportesAguaRouter  from './reportesAgua';
+import lotesRouter         from './lotes';
 
 const router = Router();
 
@@ -15,6 +17,8 @@ router.use('/maltas',        maltasRouter);
 router.use('/lupulos',       lupulosRouter);
 router.use('/levaduras',     levaduraRouter);
 router.use('/fermentadores', fermentadoresRouter);
-router.use('/estilos',       estilosRouter);
+router.use('/estilos',        estilosRouter);
+router.use('/reportes-agua', reportesAguaRouter);
+router.use('/lotes',         lotesRouter);
 
 export default router;
