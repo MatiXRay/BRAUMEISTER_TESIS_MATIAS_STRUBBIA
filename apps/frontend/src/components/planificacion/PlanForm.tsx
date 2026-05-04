@@ -193,7 +193,7 @@ export function PlanForm({
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
-      <div className="flex gap-2 pt-2 border-t border-border sticky bottom-0 bg-background pb-1">
+      <div className="flex gap-2 pt-2 border-t border-border">
         <Button type="button" variant="outline" className="flex-1" onClick={onCancel} disabled={loading}>
           <X className="h-3.5 w-3.5 mr-1.5" />Cancelar
         </Button>
