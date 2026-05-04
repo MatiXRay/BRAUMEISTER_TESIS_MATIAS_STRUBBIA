@@ -1,50 +1,46 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useAuth } from "@clerk/nextjs";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { PlanForm } from "./PlanForm";
 import { PlanItem, PlanFormData } from "./types";
 import { cn } from "@/lib/utils";
 
-const PX_DIA    = 30;
-const ROW_H     = 56;
-const HEADER_H  = 52;
-const LABEL_W   = 120;
-const DIAS_ATRAS  = 30;
-const DIAS_TOTAL  = 180;
+const PX_DIA    = 32;
+const ROW_H     = 52;
+const HEADER_H  = 44;
+const LABEL_ROW_H = 36;
+const LABEL_W   = 140;
+const DIAS_ATRAS  = 14;
+const DIAS_TOTAL  = 150;
 
 interface CatItem { _id: string; nombre?: string; duracion_dias?: number; color?: string; }
 
 function addDias(d: Date, n: number) {
   const r = new Date(d); r.setDate(r.getDate() + n); return r;
 }
-
 function fechaToX(base: Date, fecha: Date) {
   return Math.round((fecha.getTime() - base.getTime()) / 86400000) * PX_DIA;
 }
-
 function xToFecha(base: Date, x: number) {
-  const dias = Math.round(x / PX_DIA);
-  return addDias(base, dias);
+  return addDias(base, Math.round(x / PX_DIA));
 }
-
 function toISO(d: Date) { return d.toISOString().split("T")[0]; }
 
-// ── Bloque en el timeline ────────────────────────────────────
 function PlanBloque({
   plan, baseDate, onClick, onDragEnd,
 }: {
   plan: PlanItem; baseDate: Date;
   onClick: () => void;
-  onDragEnd: (id: string, deltaX: number) => void;
+  onDragEnd: (id: string, daysDelta: number) => void;
 }) {
-  const inicio  = new Date(plan.fecha_coccion);
-  const fin     = new Date(plan.fecha_fin);
-  const x       = fechaToX(baseDate, inicio);
-  const w       = Math.max(PX_DIA, fechaToX(baseDate, fin) - x);
+  const inicio = new Date(plan.fecha_coccion);
+  const fin    = new Date(plan.fecha_fin);
+  const x      = fechaToX(baseDate, inicio);
+  const w      = Math.max(PX_DIA * 2, fechaToX(baseDate, fin) - x);
 
   const dragRef   = useRef<{ startX: number } | null>(null);
   const [delta, setDelta] = useState(0);
@@ -54,16 +50,13 @@ function PlanBloque({
     e.stopPropagation();
     dragRef.current = { startX: e.clientX };
     setDragging(true);
-
     const move = (ev: MouseEvent) => {
       if (!dragRef.current) return;
-      const d = ev.clientX - dragRef.current.startX;
-      setDelta(d);
+      setDelta(ev.clientX - dragRef.current.startX);
     };
     const up = (ev: MouseEvent) => {
       if (!dragRef.current) return;
-      const rawDelta = ev.clientX - dragRef.current.startX;
-      const daysDelta = Math.round(rawDelta / PX_DIA);
+      const daysDelta = Math.round((ev.clientX - dragRef.current.startX) / PX_DIA);
       dragRef.current = null;
       setDelta(0);
       setDragging(false);
@@ -80,30 +73,27 @@ function PlanBloque({
   return (
     <div
       className={cn(
-        "absolute top-2 rounded-md text-white text-xs font-medium flex items-center px-2 gap-1 select-none",
-        "shadow-md border border-white/20 cursor-grab active:cursor-grabbing transition-opacity",
-        dragging && "opacity-75 z-20"
+        "absolute top-1.5 rounded-md text-white text-[11px] font-medium",
+        "flex items-center px-2 select-none shadow border border-white/15",
+        "cursor-grab active:cursor-grabbing",
+        dragging ? "opacity-70 z-20" : "z-10"
       )}
       style={{
         left: x + snappedDelta,
-        width: w - 4,
-        height: ROW_H - 16,
+        width: w - 2,
+        height: ROW_H - 12,
         background: plan.color,
       }}
       onMouseDown={onMouseDown}
       onClick={(e) => { if (Math.abs(delta) < 5) { e.stopPropagation(); onClick(); } }}
-      title={`${plan.nombre} · ${plan.duracion_dias}d`}
+      title={`${plan.nombre} · ${plan.duracion_dias}d · ${toISO(inicio)} → ${toISO(fin)}`}
     >
       <span className="truncate flex-1">{plan.nombre}</span>
-      <span className="opacity-60 text-[10px] shrink-0">{plan.duracion_dias}d</span>
-      {plan.tareas.length > 0 && (
-        <span className="opacity-70 text-[10px] shrink-0">·{plan.tareas.length}✓</span>
-      )}
+      <span className="opacity-60 text-[9px] shrink-0 ml-1">{plan.duracion_dias}d</span>
     </div>
   );
 }
 
-// ── Componente principal ─────────────────────────────────────
 export function PlanificacionTimeline({
   initialPlanes, estilos, fermentadores,
 }: {
@@ -115,29 +105,21 @@ export function PlanificacionTimeline({
   const [planes, setPlanes] = useState<PlanItem[]>(initialPlanes);
   const [panelOpen, setPanelOpen] = useState(false);
   const [editando, setEditando] = useState<PlanItem | null>(null);
-  const [nuevaFecha, setNuevaFecha]  = useState("");
+  const [nuevaFecha, setNuevaFecha] = useState("");
   const [nuevoFvId, setNuevoFvId]   = useState("");
   const [nuevoFvNombre, setNuevoFvNombre] = useState("");
   const [eliminando, setEliminando] = useState<string | null>(null);
 
   const today    = new Date(); today.setHours(0, 0, 0, 0);
   const baseDate = addDias(today, -DIAS_ATRAS);
-
-  const token = async () => (await getToken()) ?? "";
+  const token    = async () => (await getToken()) ?? "";
 
   const abrirNuevo = (fecha: string, fvId: string, fvNombre: string) => {
-    setEditando(null);
-    setNuevaFecha(fecha);
-    setNuevoFvId(fvId);
-    setNuevoFvNombre(fvNombre);
+    setEditando(null); setNuevaFecha(fecha);
+    setNuevoFvId(fvId); setNuevoFvNombre(fvNombre);
     setPanelOpen(true);
   };
-
-  const abrirEdicion = (plan: PlanItem) => {
-    setEditando(plan);
-    setPanelOpen(true);
-  };
-
+  const abrirEdicion = (plan: PlanItem) => { setEditando(plan); setPanelOpen(true); };
   const cerrar = () => { setPanelOpen(false); setEditando(null); };
 
   const handleGuardar = async (data: PlanFormData) => {
@@ -162,6 +144,7 @@ export function PlanificacionTimeline({
     try {
       await apiFetch(`/planificacion/${id}`, await token(), { method: "DELETE" });
       setPlanes((p) => p.filter((x) => x._id !== id));
+      cerrar();
     } finally { setEliminando(null); }
   };
 
@@ -169,18 +152,17 @@ export function PlanificacionTimeline({
     const plan = planes.find((p) => p._id === id);
     if (!plan) return;
     const newInicio = addDias(new Date(plan.fecha_coccion), daysDelta);
-    const newFin    = addDias(new Date(plan.fecha_fin),     daysDelta);
+    const newFin    = addDias(new Date(plan.fecha_fin), daysDelta);
     const payload = {
-      fecha_coccion:     toISO(newInicio),
-      fecha_fin:         toISO(newFin),
-      duracion_dias:     plan.duracion_dias,
-      fermentador_id:    plan.fermentador_id,
+      fecha_coccion:      toISO(newInicio),
+      fecha_fin:          toISO(newFin),
+      duracion_dias:      plan.duracion_dias,
+      fermentador_id:     plan.fermentador_id,
       fermentador_nombre: plan.fermentador_nombre,
     };
     setPlanes((p) => p.map((x) => x._id === id
       ? { ...x, fecha_coccion: newInicio.toISOString(), fecha_fin: newFin.toISOString() }
-      : x
-    ));
+      : x));
     try {
       const t = await token();
       await apiFetch<PlanItem>(`/planificacion/${id}/mover`, t, {
@@ -191,47 +173,79 @@ export function PlanificacionTimeline({
     }
   }, [planes]);
 
-  // Filas del timeline: fermentadores + "Sin asignar"
   const filas: { id: string; nombre: string }[] = [
     ...fermentadores.map((f) => ({ id: f._id!, nombre: f.nombre! })),
     { id: "", nombre: "Sin asignar" },
   ];
 
-  const dias = Array.from({ length: DIAS_TOTAL }, (_, i) => addDias(baseDate, i));
-  const todayX = fechaToX(baseDate, today);
-  const totalW = DIAS_TOTAL * PX_DIA;
+  const dias    = Array.from({ length: DIAS_TOTAL }, (_, i) => addDias(baseDate, i));
+  const todayX  = fechaToX(baseDate, today);
+  const totalW  = DIAS_TOTAL * PX_DIA;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-4 h-full">
+      {/* Cabecera de página */}
+      <div className="flex items-center justify-between shrink-0">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Planificación</h1>
-          <p className="text-sm text-muted-foreground mt-1">{planes.length} planes activos · arrastrá para mover</p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {planes.length} {planes.length === 1 ? "plan activo" : "planes activos"} · arrastrá los bloques para mover
+          </p>
         </div>
         <Button onClick={() => abrirNuevo(toISO(today), "", "")}>
           <Plus className="h-4 w-4 mr-2" />Nuevo plan
         </Button>
       </div>
 
-      <div className="flex gap-4 items-start">
-        {/* ── TIMELINE ────────────────────────────────────────── */}
-        <div className="flex-1 rounded-xl border border-border overflow-hidden bg-card">
-          <div className="overflow-x-auto">
+      <div className="flex gap-4 items-start min-h-0 flex-1">
+        {/* TIMELINE */}
+        <div className="flex-1 min-w-0 rounded-xl border border-border overflow-hidden bg-card flex flex-col">
+          <div className="overflow-x-auto flex-1">
             <div style={{ width: LABEL_W + totalW, minWidth: "100%" }}>
-              {/* Header de fechas */}
+
+              {/* ── ROW: Etiquetas de planes (sobre el calendario) ── */}
+              <div className="flex border-b border-border bg-muted/30" style={{ height: LABEL_ROW_H }}>
+                <div className="shrink-0 border-r border-border flex items-center px-3" style={{ width: LABEL_W }}>
+                  <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Planes</span>
+                </div>
+                <div className="relative flex-1 overflow-hidden" style={{ width: totalW }}>
+                  {planes.map((plan) => {
+                    const x = fechaToX(baseDate, new Date(plan.fecha_coccion));
+                    const w = Math.max(PX_DIA * 2,
+                      fechaToX(baseDate, new Date(plan.fecha_fin)) - x);
+                    return (
+                      <button
+                        key={plan._id}
+                        className="absolute top-1.5 rounded-full text-white text-[10px] font-semibold px-2.5 flex items-center gap-1 truncate border border-white/20 shadow-sm hover:brightness-110 transition-all cursor-pointer"
+                        style={{
+                          left: x,
+                          width: w - 2,
+                          height: LABEL_ROW_H - 12,
+                          background: plan.color,
+                        }}
+                        onClick={() => abrirEdicion(plan)}
+                        title={`${plan.nombre} · ${plan.duracion_dias}d`}
+                      >
+                        <span className="truncate">{plan.nombre}</span>
+                        <span className="opacity-60 shrink-0 ml-auto">{plan.duracion_dias}d</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* ── ROW: Header de fechas ── */}
               <div className="flex sticky top-0 z-10 bg-card border-b border-border" style={{ height: HEADER_H }}>
-                <div className="shrink-0 border-r border-border flex items-end pb-2 px-3"
-                  style={{ width: LABEL_W }}>
-                  <span className="text-xs text-muted-foreground font-medium">Fermentador</span>
+                <div className="shrink-0 border-r border-border flex items-end pb-2 px-3" style={{ width: LABEL_W }}>
+                  <span className="text-[10px] text-muted-foreground font-medium">Fermentador</span>
                 </div>
                 <div className="relative" style={{ width: totalW }}>
                   {dias.map((d, i) => {
                     const isFirst = i === 0 || d.getDate() === 1;
                     const isMonday = d.getDay() === 1;
-                    const isSunday = d.getDay() === 0;
                     if (!isFirst && !isMonday) return null;
                     return (
-                      <div key={i} className="absolute bottom-0 text-[10px] text-muted-foreground pb-1"
+                      <div key={i} className="absolute bottom-0 text-[10px] text-muted-foreground pb-1.5 font-medium"
                         style={{ left: i * PX_DIA + 2 }}>
                         {d.getDate() === 1 || i === 0
                           ? d.toLocaleDateString("es", { month: "short", day: "numeric" })
@@ -239,49 +253,48 @@ export function PlanificacionTimeline({
                       </div>
                     );
                   })}
-                  {/* Línea de hoy */}
-                  <div className="absolute top-0 bottom-0 w-[2px] bg-emerald-500 z-20"
-                    style={{ left: todayX }}>
-                    <span className="absolute -top-1 left-1 text-[9px] text-emerald-400 font-bold whitespace-nowrap">HOY</span>
+                  <div className="absolute top-0 bottom-0 w-px bg-emerald-500 z-10 pointer-events-none" style={{ left: todayX }}>
+                    <span className="absolute top-1 left-1.5 text-[9px] text-emerald-500 font-bold whitespace-nowrap">HOY</span>
                   </div>
                 </div>
               </div>
 
-              {/* Filas por fermentador */}
+              {/* ── FILAS por fermentador ── */}
               {filas.map((fila) => {
                 const planesRow = planes.filter((p) =>
                   fila.id ? p.fermentador_id === fila.id : !p.fermentador_id
                 );
                 return (
-                  <div key={fila.id || "none"} className="flex border-b border-border last:border-0"
+                  <div key={fila.id || "none"}
+                    className="flex border-b border-border last:border-0 hover:bg-muted/10 transition-colors group"
                     style={{ height: ROW_H }}>
-                    {/* Etiqueta fila */}
-                    <div className="shrink-0 border-r border-border flex items-center px-3"
-                      style={{ width: LABEL_W }}>
-                      <span className="text-xs font-medium truncate">{fila.nombre}</span>
+                    <div className="shrink-0 border-r border-border flex items-center px-3" style={{ width: LABEL_W }}>
+                      <span className="text-xs font-medium truncate text-muted-foreground">{fila.nombre}</span>
                     </div>
-                    {/* Celdas del timeline */}
-                    <div className="relative flex-1 cursor-pointer group"
+                    <div
+                      className="relative flex-1 cursor-crosshair"
                       style={{ width: totalW }}
                       onClick={(e) => {
                         const rect = e.currentTarget.getBoundingClientRect();
                         const x = e.clientX - rect.left;
-                        const d = xToFecha(baseDate, x);
-                        abrirNuevo(toISO(d), fila.id, fila.nombre);
-                      }}>
-                      {/* Fondo de días */}
+                        abrirNuevo(toISO(xToFecha(baseDate, x)), fila.id, fila.nombre);
+                      }}
+                    >
+                      {/* Fondo de columnas */}
                       {dias.map((d, i) => (
                         <div key={i}
                           className={cn(
-                            "absolute top-0 bottom-0 border-r border-border/30",
-                            d.getDay() === 0 || d.getDay() === 6 ? "bg-muted/20" : "",
-                            d.getDay() === 1 ? "border-r border-border/60" : ""
+                            "absolute top-0 bottom-0",
+                            d.getDay() === 0 || d.getDay() === 6
+                              ? "bg-muted/15"
+                              : "",
+                            d.getDay() === 1 ? "border-l border-border/40" : "border-l border-border/20"
                           )}
                           style={{ left: i * PX_DIA, width: PX_DIA }}
                         />
                       ))}
                       {/* Línea de hoy */}
-                      <div className="absolute top-0 bottom-0 w-[2px] bg-emerald-500/30 z-10 pointer-events-none"
+                      <div className="absolute top-0 bottom-0 w-px bg-emerald-500/20 z-10 pointer-events-none"
                         style={{ left: todayX }} />
                       {/* Bloques de planes */}
                       {planesRow.map((plan) => (
@@ -296,7 +309,7 @@ export function PlanificacionTimeline({
                       {/* Hint vacío */}
                       {planesRow.length === 0 && (
                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                          <span className="text-xs text-muted-foreground">Click para agregar</span>
+                          <span className="text-[11px] text-muted-foreground">+ agregar plan aquí</span>
                         </div>
                       )}
                     </div>
@@ -307,32 +320,36 @@ export function PlanificacionTimeline({
           </div>
         </div>
 
-        {/* ── PANEL LATERAL ────────────────────────────────────── */}
+        {/* PANEL LATERAL */}
         {panelOpen && (
-          <div className="w-80 shrink-0 rounded-xl border border-border bg-card p-4 max-h-[80vh] overflow-y-auto">
+          <div className="w-80 shrink-0 rounded-xl border border-border bg-card p-4 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold">
-                {editando ? `Editar: ${editando.nombre}` : "Nuevo plan"}
+                {editando ? `Editar plan` : "Nuevo plan"}
               </h3>
               {editando && (
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
+                <Button
+                  variant="ghost" size="icon"
+                  className="h-7 w-7 text-destructive hover:text-destructive"
                   disabled={eliminando === editando._id}
-                  onClick={() => handleEliminar(editando._id)}>
+                  onClick={() => handleEliminar(editando._id)}
+                >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               )}
             </div>
             <PlanForm
-              initial={editando
-                ? {
-                    ...editando,
-                    fecha_coccion: new Date(editando.fecha_coccion).toISOString().split("T")[0],
-                    fecha_fin:     new Date(editando.fecha_fin).toISOString().split("T")[0],
-                    tareas: editando.tareas.map((t) => ({
-                      ...t, fecha_estimada: t.fecha_estimada ? new Date(t.fecha_estimada).toISOString().split("T")[0] : "",
-                    })),
-                  }
-                : undefined}
+              initial={editando ? {
+                ...editando,
+                fecha_coccion: new Date(editando.fecha_coccion).toISOString().split("T")[0],
+                fecha_fin:     new Date(editando.fecha_fin).toISOString().split("T")[0],
+                tareas: editando.tareas.map((t) => ({
+                  ...t,
+                  fecha_estimada: t.fecha_estimada
+                    ? new Date(t.fecha_estimada).toISOString().split("T")[0]
+                    : "",
+                })),
+              } : undefined}
               initialFecha={nuevaFecha}
               initialFermentadorId={nuevoFvId}
               initialFermentadorNombre={nuevoFvNombre}
@@ -344,20 +361,6 @@ export function PlanificacionTimeline({
           </div>
         )}
       </div>
-
-      {/* Leyenda */}
-      {planes.length > 0 && (
-        <div className="flex flex-wrap gap-3">
-          {planes.map((p) => (
-            <div key={p._id} className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
-              onClick={() => abrirEdicion(p)}>
-              <span className="w-3 h-3 rounded-sm shrink-0" style={{ background: p.color }} />
-              <span>{p.nombre}</span>
-              <Pencil className="h-2.5 w-2.5 opacity-40" />
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
