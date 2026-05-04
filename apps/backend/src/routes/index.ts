@@ -6,6 +6,7 @@ import fermentadoresRouter from './fermentadores';
 import estilosRouter       from './estilos';
 import reportesAguaRouter  from './reportesAgua';
 import lotesRouter         from './lotes';
+import estadisticasRouter  from './estadisticas';
 
 const router = Router();
 
@@ -20,5 +21,6 @@ router.use('/fermentadores', fermentadoresRouter);
 router.use('/estilos',        estilosRouter);
 router.use('/reportes-agua', reportesAguaRouter);
 router.use('/lotes',         lotesRouter);
+router.use('/estadisticas',  estadisticasRouter);
 
 export default router;
